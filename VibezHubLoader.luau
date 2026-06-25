@@ -2,39 +2,12 @@
     ╦  ╦╦╔╗ ╔═╗╔═╗  ╦ ╦╦ ╦╔╗
     ╚╗╔╝║╠╩╗║╣ ╔═╝  ╠═╣║ ║╠╩╗
      ╚╝ ╩╚═╝╚═╝╚═╝  ╩ ╩╚═╝╚═╝
-    Vibez Hub — Loader  (FREE | robloxscripts.com)
-    -------------------------------------------------------------------------
-    This is the THIN, PUBLIC entry script users execute. It contains NO hub
-    logic — only the loading screen + key entry. It sets the `SCRIPT_KEY` global
-    and loads the obfuscated hub core that jnkie serves. jnkie bakes the key/HWID
-    check into the core, so a bad key makes jnkie skip our payload (no SDK call
-    needed). The core builds the UI and the live key timer.
-
-      Loading screen + key box  ->  getgenv().SCRIPT_KEY = key
-                                ->  loadstring(HttpGet(CORE_LOADER_URL))()
-                                ->  jnkie validates key/HWID, runs our payload
-                                ->  core sets __VibezAuthed / __VibezReady
-
-    Keys are obtained from the jnkie Direct Key Link after the checkpoint.
-    The "Get a Key" button copies GET_KEY_URL (jnkie.com/get-key/vibes-hub).
-
-    UI: VibeUI  (https://github.com/RealSlimShady2000/VibeUI)
+    Vibez Hub  —  FREE  |  robloxscripts.com
 ]]
 
-----------------------------------------------------------------------
--- Config (FILL THESE IN — from your jnkie.com dashboard)
-----------------------------------------------------------------------
--- jnkie's self-contained script loader URL (from the script card's "copy loader"
--- 🔄 button). jnkie bakes the key-check into the obfuscated core, so we just set
--- getgenv().SCRIPT_KEY and load this — no SDK / service / identifier needed.
 local CORE_LOADER_URL = "https://api.jnkie.com/api/v1/luascripts/public/404f40f3cbdc9c86fb24c18302977c2a617525879b75e18615f86f25955a3113/download"
-
--- "Get a key" link (jnkie Direct Key Link for the 'vibes-hub' service).
 local GET_KEY_URL = "https://jnkie.com/get-key/vibes-hub"
 
-----------------------------------------------------------------------
--- Services / env
-----------------------------------------------------------------------
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
@@ -42,9 +15,7 @@ local setclip = (setclipboard or set_clipboard or (syn and syn.write_clipboard))
 local function copy(text) pcall(function() if setclip then setclip(text) end end) end
 
 ----------------------------------------------------------------------
--- Remembered keys — persist the last working key to disk so the user
--- doesn't re-paste each session. jnkie keys are HWID-locked, so this file
--- is useless on another machine. Most-recent-first, capped at 5.
+-- Saved keys
 ----------------------------------------------------------------------
 local KEY_FILE = "VibezHub_keys.txt"
 local HAS_FS = (type(writefile) == "function" and type(readfile) == "function" and type(isfile) == "function")
@@ -68,7 +39,6 @@ local function writeKeys(list)
     pcall(function() writefile(KEY_FILE, table.concat(list, "\n")) end)
 end
 
--- Promote a key to most-recent (dedupe, cap 5).
 local function rememberKey(key)
     if not key or key == "" then return end
     local list = loadKeys()
@@ -86,24 +56,22 @@ local function forgetKey(key)
     writeKeys(out)
 end
 
--- The most recently used key, if any.
 local function lastKey()
     local list = loadKeys()
     return list[1]
 end
 
 ----------------------------------------------------------------------
--- Singleton guard — unload any previous Vibez Hub instance first
+-- Singleton guard
 ----------------------------------------------------------------------
 pcall(function() if _G.__VibezHubUnload then _G.__VibezHubUnload() end end)
--- Clear stale auth flags from a prior run so our success check is honest.
 pcall(function()
     getgenv().__VibezAuthed = nil
     getgenv().__VibezReady = nil
 end)
 
 ----------------------------------------------------------------------
--- Load VibeUI once and hand it to the core via getgenv (avoids a 2nd fetch)
+-- UI library
 ----------------------------------------------------------------------
 local VibeUI
 do
@@ -114,12 +82,12 @@ do
         VibeUI = lib
         pcall(function() getgenv().VibeUI = lib end)
     else
-        warn("[VIBEZ HUB] VibeUI failed to load (loading screen will still run):", lib)
+        warn("[Vibez Hub] UI library failed to load:", lib)
     end
 end
 
 ----------------------------------------------------------------------
--- Rasta palette (matches the hub theme)
+-- Palette
 ----------------------------------------------------------------------
 local C = {
     gold   = Color3.fromRGB(255, 209, 0),
@@ -137,14 +105,9 @@ local C = {
 -- GUI helpers
 ----------------------------------------------------------------------
 local function getGuiParent()
-    -- Prefer a hidden, exploit-protected container.
     local ok, hui = pcall(function() return gethui and gethui() end)
     if ok and hui then return hui end
-    local cg = game:GetService("CoreGui")
-    pcall(function()
-        if syn and syn.protect_gui then return end -- protected later
-    end)
-    return cg
+    return game:GetService("CoreGui")
 end
 
 local function make(class, props, children)
@@ -155,7 +118,7 @@ local function make(class, props, children)
 end
 
 ----------------------------------------------------------------------
--- Build the loading / key screen
+-- Loading / key screen
 ----------------------------------------------------------------------
 local screenGui = make("ScreenGui", {
     Name = "VibezHubLoader",
@@ -167,7 +130,6 @@ local screenGui = make("ScreenGui", {
 pcall(function() if syn and syn.protect_gui then syn.protect_gui(screenGui) end end)
 screenGui.Parent = getGuiParent()
 
--- Full-screen dim backdrop
 local dim = make("Frame", {
     Name = "Dim",
     Size = UDim2.fromScale(1, 1),
@@ -177,7 +139,6 @@ local dim = make("Frame", {
     Parent = screenGui,
 })
 
--- Centered card
 local card = make("Frame", {
     Name = "Card",
     AnchorPoint = Vector2.new(0.5, 0.5),
@@ -185,13 +146,12 @@ local card = make("Frame", {
     Size = UDim2.fromOffset(420, 360),
     BackgroundColor3 = C.panel,
     BorderSizePixel = 0,
-    ClipsDescendants = true, -- clip the top stripe to the rounded corners
+    ClipsDescendants = true,
     Parent = dim,
 }, {
     make("UICorner", { CornerRadius = UDim.new(0, 14) }),
     make("UIStroke", { Color = C.green, Thickness = 1.5, Transparency = 0.2 }),
 })
--- Subtle rasta gradient sheen on the card border via an inner stroke frame
 make("UIGradient", {
     Rotation = 90,
     Color = ColorSequence.new({
@@ -201,8 +161,6 @@ make("UIGradient", {
     Parent = card,
 })
 
--- Top accent bar (red / gold / green rasta stripe) — clipped flush to the
--- card's rounded top corners (card has ClipsDescendants), so no square overhang.
 make("Frame", {
     Name = "Stripe",
     Size = UDim2.new(1, 0, 0, 4),
@@ -221,10 +179,7 @@ make("Frame", {
     }),
 })
 
-----------------------------------------------------------------------
--- Make the card draggable (mouse + touch). Buttons / the key box consume
--- their own input, so dragging only triggers on the card background.
-----------------------------------------------------------------------
+-- Draggable card
 do
     local dragging, dragStart, startPos
     local conns = {}
@@ -282,7 +237,6 @@ make("TextLabel", {
     Parent = card,
 })
 
--- Status text
 local status = make("TextLabel", {
     Name = "Status",
     BackgroundTransparency = 1,
@@ -299,7 +253,6 @@ local status = make("TextLabel", {
     Parent = card,
 })
 
--- Progress bar
 local barBack = make("Frame", {
     Name = "BarBack",
     Position = UDim2.fromOffset(20, 132),
@@ -331,7 +284,6 @@ local function setProgress(pct, dur)
     }):Play()
 end
 local function setStatus(text) status.Text = text end
--- Let the core push status updates during its own load phase.
 pcall(function()
     getgenv().__VibezStatus = function(text, pct)
         pcall(function()
@@ -342,7 +294,7 @@ pcall(function()
 end)
 
 ----------------------------------------------------------------------
--- Key entry section
+-- Key entry
 ----------------------------------------------------------------------
 local keyBox = make("TextBox", {
     Name = "KeyBox",
@@ -385,7 +337,7 @@ local function makeButton(name, text, y, fill, textColor)
 end
 
 local submitBtn = makeButton("Submit", "UNLOCK HUB", 206, C.green, C.text)
-local getKeyBtn = makeButton("GetKey", "Get a Key (do checkpoints)", 254, C.greenD, C.gold)
+local getKeyBtn = makeButton("GetKey", "Get a Key", 254, C.greenD, C.gold)
 
 make("TextLabel", {
     Name = "Footer",
@@ -393,14 +345,14 @@ make("TextLabel", {
     Position = UDim2.fromOffset(0, 318),
     Size = UDim2.new(1, 0, 0, 16),
     Font = Enum.Font.Gotham,
-    Text = "FREE  •  secured by jnkie  •  Right Ctrl to toggle once loaded",
+    Text = "FREE  •  Right Ctrl to toggle once loaded",
     TextColor3 = C.sub,
     TextSize = 11,
     Parent = card,
 })
 
 ----------------------------------------------------------------------
--- Submit / auth flow
+-- Auth
 ----------------------------------------------------------------------
 local busy = false
 
@@ -416,7 +368,6 @@ local function fadeOutAndClose()
     setStatus("Welcome to Vibez Hub! 🌴")
     setProgress(1, 0.4)
     task.wait(0.45)
-    -- Fade the whole loader away; the hub UI is already up underneath.
     for _, obj in ipairs(screenGui:GetDescendants()) do
         if obj:IsA("GuiObject") then
             pcall(function()
@@ -447,13 +398,8 @@ local function doAuth(key, fromMemory)
     setStatus("Authenticating…")
     setProgress(0.5, 0.45)
 
-    -- jnkie bakes the key-check into the obfuscated core: set SCRIPT_KEY, then
-    -- load the script. jnkie's wrapper validates the key + HWID server-side and
-    -- only runs our code (setting __VibezAuthed) + injects JD_* vars when valid.
     pcall(function() getgenv().SCRIPT_KEY = key end)
     pcall(function() getgenv().__VibezExtendUrl = GET_KEY_URL end)
-    -- Relaunch string for the core's server-hop (queue_on_teleport): re-sets the
-    -- key + re-runs the obfuscated core in the destination server.
     pcall(function()
         getgenv().__VibezRelaunch = ("getgenv().SCRIPT_KEY=[==[%s]==] loadstring(game:HttpGet([==[%s]==]))()"):format(key, CORE_LOADER_URL)
     end)
@@ -462,18 +408,14 @@ local function doAuth(key, fromMemory)
     local ok, err = pcall(function()
         local src = game:HttpGet(CORE_LOADER_URL)
         local fn = loadstring(src)
-        if not fn then error("loadstring failed (bad core URL?)") end
+        if not fn then error("loadstring failed") end
         fn()
     end)
 
-    -- Success = the core set __VibezAuthed (jnkie ran our payload), NOT pcall —
-    -- an invalid key makes jnkie skip the payload, so __VibezAuthed stays nil.
     local authed = (getgenv().__VibezAuthed == true)
 
     if ok and authed then
-        -- Remember this working key for next session (most-recent-first).
         rememberKey(key)
-        -- Wait briefly for the core to finish building its UI.
         setStatus("Loading hub…"); setProgress(0.85, 0.5)
         local t0 = os.clock()
         while getgenv().__VibezReady ~= true and os.clock() - t0 < 12 do
@@ -483,12 +425,10 @@ local function doAuth(key, fromMemory)
     else
         setBusy(false)
         setProgress(0.3, 0.4)
-        -- Loaded fine but no auth → bad/expired key. pcall error → network/URL.
-        local msg = "Invalid or expired key. Do the checkpoints and try again."
+        local msg = "Invalid or expired key. Grab a new one and try again."
         if not ok and typeof(err) == "string" and #err > 0 then
             msg = "Load error: " .. err:sub(1, 80)
         elseif fromMemory then
-            -- A remembered key stopped working → drop it and nudge for more time.
             forgetKey(key)
             msg = "Your saved key expired. Tap 'Get a Key' for more time."
         end
@@ -501,17 +441,15 @@ submitBtn.MouseButton1Click:Connect(function() doAuth(keyBox.Text) end)
 keyBox.FocusLost:Connect(function(enter) if enter then doAuth(keyBox.Text) end end)
 getKeyBtn.MouseButton1Click:Connect(function()
     copy(GET_KEY_URL)
-    setStatus("Key link copied! Open it in your browser, finish the checkpoint, grab the key from the bot.")
+    setStatus("Key link copied! Open it in your browser, grab your key, then paste it here.")
 end)
 
 ----------------------------------------------------------------------
--- Startup: the normal flow is manual entry (the Discord bot hands the user
--- a key string to copy/paste). As a bonus, if a key is already present —
--- e.g. some setups inject `SCRIPT_KEY` above the loader — we auto-authenticate.
+-- Startup
 ----------------------------------------------------------------------
 local function detectPresetKey()
     local k
-    pcall(function() k = SCRIPT_KEY end)            -- global, if injected above us
+    pcall(function() k = SCRIPT_KEY end)
     if type(k) ~= "string" or k == "" then
         pcall(function() k = getgenv().SCRIPT_KEY end)
     end
@@ -522,7 +460,7 @@ end
 task.spawn(function()
     setStatus("Initializing…"); setProgress(0.15, 0.4); task.wait(0.4)
     if not VibeUI then
-        setStatus("VibeUI failed to load — re-execute the script.")
+        setStatus("Failed to load — re-execute the script.")
         setProgress(0.3, 0.4)
         return
     end
@@ -534,8 +472,6 @@ task.spawn(function()
         doAuth(preset)
         return
     end
-    -- Remembered key: auto-authenticate the last working key. If it's expired,
-    -- doAuth(fromMemory=true) forgets it and prompts the user to get more time.
     local saved = lastKey()
     if saved then
         keyBox.Text = saved
@@ -543,7 +479,7 @@ task.spawn(function()
         task.wait(0.25)
         doAuth(saved, true)
     else
-        setStatus("Paste your key, or tap 'Get a Key' to do the checkpoints.")
+        setStatus("Paste your key, or tap 'Get a Key' to grab one.")
         setProgress(0.3, 0.4)
     end
 end)
