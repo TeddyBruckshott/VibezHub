@@ -18,7 +18,7 @@ Paste into your executor and run. Tap **Get a Key**, finish one quick checkpoint
 
 ## 🎮 Supported games
 
-### Grow a Garden 2 — full Rift-level auto-farm
+### Grow a Garden 2 — complete auto-farm
 - **Farm** — Auto Harvest · Plant · Sell (Daily Deal 5× + Double-or-Nothing) · Favorite — all with **rarity / mutation / weight** filters
 - **Night** — Auto Steal (filters · per-cycle · target players) + Defense (panic harvest · lock garden)
 - **Garden** — Watering · Sprinklers · Unboxing (eggs / crates / packs) · Auto Expand · Codes · Shovel
