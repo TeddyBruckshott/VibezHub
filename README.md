@@ -9,10 +9,13 @@ Powered by the [jnkie](https://jnkie.com) key system. Secure, HWID-locked, free 
 ## 🚀 Load it
 
 ```lua
+if not game:IsLoaded() then game.Loaded:Wait() end
 loadstring(game:HttpGet("https://raw.githubusercontent.com/TeddyBruckshott/VibezHub/main/VibezHubLoader.luau"))()
 ```
 
 Paste into your executor and run. Tap **Get a Key**, finish one quick checkpoint, paste your key — and you're in. The hub **remembers your key**, so it auto-loads next time.
+
+> The `game.Loaded:Wait()` guard makes it safe to drop straight into your **auto-execute folder** — it waits for the game to finish loading before running, so it also resumes cleanly after **server hops**.
 
 ---
 
